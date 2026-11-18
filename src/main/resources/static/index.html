@@ -1,0 +1,1840 @@
+<!DOCTYPE html>
+<html lang="vi" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XYZ AutoCare — Đặt Lịch & Quản Lý Dịch Vụ Ô Tô</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Be Vietnam Pro"', 'sans-serif'] },
+                    colors: {
+                        brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 900: '#0f172a' },
+                        accent: { 500: '#f97316', 600: '#ea580c' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html { font-size: 16.5px; }
+        body {
+            background-color: #f1f5f9;
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 28px 28px;
+            color: #0f172a;
+        }
+        ::placeholder { color: #94a3b8 !important; opacity: 0.65 !important; font-weight: 400; }
+        input:focus::placeholder, textarea:focus::placeholder { opacity: 0.35 !important; }
+        .view-section { display: none; }
+        .view-section.active { display: block; animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        .glass-nav { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(16px); }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col justify-between">
+
+<!-- HEADER -->
+<header class="glass-nav text-white sticky top-0 z-50 border-b border-slate-800 shadow-xl">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap justify-between items-center gap-4">
+        <div class="flex items-center space-x-3.5 cursor-pointer group" onclick="switchView('portal')">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 to-accent-500 flex items-center justify-center shadow-lg group-hover:scale-105 transition">
+                <i class="fa-solid fa-car-side text-white text-xl"></i>
+            </div>
+            <div>
+                <div class="flex items-center space-x-2">
+                    <span class="font-extrabold text-xl tracking-tight text-white">XYZ AUTOCARE</span>
+                    <span class="bg-accent-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">v3.0</span>
+                </div>
+                <p class="text-xs text-slate-300 font-medium mt-0.5">Trung Tâm Bảo Dưỡng & Sửa Chữa Ô Tô Trực Tuyến</p>
+            </div>
+        </div>
+
+        <nav class="flex items-center bg-slate-800/90 p-1.5 rounded-2xl border border-slate-700">
+            <button id="btn-portal" onclick="switchView('portal')" class="nav-pill px-5 py-2.5 rounded-xl text-sm font-bold transition flex items-center bg-brand-600 text-white shadow-md">
+                <i class="fa-solid fa-calendar-plus mr-2"></i> Dịch Vụ & Đặt Lịch
+            </button>
+            <button id="btn-tracking" onclick="switchView('tracking')" class="nav-pill px-5 py-2.5 rounded-xl text-sm font-bold transition flex items-center text-slate-300 hover:text-white">
+                <i class="fa-solid fa-clock-rotate-left mr-2"></i> Tra Cứu & Đổi/Hủy
+                <span id="nav-badge-count" class="ml-2 bg-accent-500 text-white text-xs font-extrabold px-2 py-0.5 rounded-full">1</span>
+            </button>
+            <!-- Ẩn mặc định với Khách hàng -->
+            <button id="btn-admin" onclick="switchView('admin')" class="nav-pill hidden px-5 py-2.5 rounded-xl text-sm font-bold transition items-center text-amber-400 hover:text-white">
+                <i class="fa-solid fa-user-shield mr-2"></i> Quản Trị Xưởng (Admin)
+            </button>
+        </nav>
+
+        <div class="flex items-center space-x-3">
+            <div class="hidden sm:flex items-center space-x-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl text-sm">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span class="text-slate-300">Tài khoản:</span>
+                <strong id="header-role-text" class="text-white font-bold">Khách hàng</strong>
+            </div>
+            <button onclick="openAuthModal()" class="bg-accent-500 hover:bg-accent-600 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition flex items-center shadow-lg">
+                <i class="fa-solid fa-right-to-bracket mr-2"></i> Đổi Vai Trò (F09)
+            </button>
+        </div>
+    </div>
+</header>
+
+<!-- MAIN -->
+<main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- VIEW 1: DỊCH VỤ & ĐẶT LỊCH GỘP CHUNG -->
+    <section id="view-portal" class="view-section active">
+        <div class="relative rounded-3xl bg-gradient-to-r from-slate-900 via-brand-900 to-slate-900 text-white p-8 mb-8 overflow-hidden shadow-2xl border border-slate-800">
+            <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div class="max-w-2xl">
+                        <span class="inline-flex items-center bg-accent-500 text-white text-xs font-extrabold uppercase tracking-wider px-3.5 py-1.5 rounded-full mb-4 shadow">
+                            <i class="fa-solid fa-bolt mr-1.5"></i> Đặt lịch thông minh 1 chạm
+                        </span>
+                    <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
+                        Chọn Dịch Vụ & Đặt Lịch Bảo Dưỡng Ngay Trên Một Màn Hình
+                    </h1>
+                    <p class="text-slate-200 text-base mt-3 leading-relaxed">
+                        Tích chọn dịch vụ bên trái, nhập thông tin xe và chọn thanh toán COD tại xưởng hoặc Trả trước giữ chỗ ngay bên phải.
+                    </p>
+                </div>
+                <div class="grid grid-cols-3 gap-4 shrink-0">
+                    <div class="bg-white/10 border border-white/15 p-4 rounded-2xl text-center">
+                        <div class="text-2xl font-extrabold text-white">03 Xe</div>
+                        <div class="text-xs text-slate-300 mt-1 font-medium">Tối đa / Giờ</div>
+                    </div>
+                    <div class="bg-white/10 border border-white/15 p-4 rounded-2xl text-center">
+                        <div class="text-2xl font-extrabold text-emerald-400">COD / QR</div>
+                        <div class="text-xs text-slate-300 mt-1 font-medium">Thanh toán</div>
+                    </div>
+                    <div class="bg-white/10 border border-white/15 p-4 rounded-2xl text-center">
+                        <div class="text-2xl font-extrabold text-amber-400">100%</div>
+                        <div class="text-xs text-slate-300 mt-1 font-medium">Đúng hẹn</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <!-- CỘT TRÁI: DANH MỤC DỊCH VỤ GỘP CHUNG -->
+            <div class="lg:col-span-7 space-y-5">
+                <div class="bg-white rounded-3xl p-6 shadow-md border border-slate-200">
+                    <div class="flex flex-wrap justify-between items-center gap-3 mb-5">
+                        <div>
+                            <h2 class="text-xl font-extrabold text-slate-900 flex items-center">
+                                <span class="w-8 h-8 rounded-xl bg-brand-600 text-white inline-flex items-center justify-center mr-2.5 text-sm shadow">1</span>
+                                Chọn Gói Dịch Vụ Bảo Dưỡng & Sửa Chữa
+                            </h2>
+                            <p class="text-sm text-slate-500 mt-1">Bấm trực tiếp vào thẻ dịch vụ bên dưới để chọn hoặc bỏ chọn</p>
+                        </div>
+                        <button id="btn-add-service-portal" onclick="openNewServiceModal()" class="hidden text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 px-4 py-2.5 rounded-xl transition items-center shadow">
+                            <i class="fa-solid fa-plus mr-2"></i> Thêm Dịch Vụ (F01)
+                        </button>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-3 mb-6">
+                        <div class="relative flex-grow">
+                            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-base"></i>
+                            <input type="text" id="search-service-input" oninput="renderUnifiedServices()" placeholder="Tìm nhanh dịch vụ (VD: Bảo dưỡng, thay dầu, phanh...)" class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-base text-slate-900 focus:bg-white focus:border-brand-600 focus:outline-none transition">
+                        </div>
+                        <select id="filter-category-select" onchange="renderUnifiedServices()" class="bg-slate-50 border border-slate-300 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 focus:bg-white focus:border-brand-600 focus:outline-none">
+                            <option value="ALL">Tất cả danh mục</option>
+                            <option value="Bảo dưỡng định kỳ">Bảo dưỡng định kỳ</option>
+                            <option value="Động cơ & Dầu máy">Động cơ & Dầu máy</option>
+                            <option value="Phanh & An toàn">Phanh & An toàn</option>
+                            <option value="Điện & Điều hòa">Điện & Điều hòa</option>
+                        </select>
+                    </div>
+
+                    <div id="unified-service-list" class="space-y-3.5"></div>
+                </div>
+            </div>
+
+            <!-- CỘT PHẢI: FORM ĐẶT LỊCH & THANH TOÁN COD / TRẢ TRƯỚC -->
+            <div class="lg:col-span-5 lg:sticky lg:top-24">
+                <div class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-900 text-white px-6 py-5 flex justify-between items-center">
+                        <h3 class="text-lg font-extrabold flex items-center">
+                            <span class="w-8 h-8 rounded-xl bg-accent-500 text-white inline-flex items-center justify-center mr-2.5 text-sm shadow">2</span>
+                            Thông Tin Xe & Thanh Toán
+                        </h3>
+                        <span id="selected-count-badge" class="bg-amber-400 text-slate-900 text-xs font-extrabold px-3 py-1 rounded-full">Đã chọn 1 dịch vụ</span>
+                    </div>
+
+                    <div class="p-6 space-y-5">
+                        <div class="bg-brand-50/70 rounded-2xl p-4 border border-brand-200">
+                            <div class="flex justify-between items-center text-xs font-extrabold text-brand-700 uppercase mb-2.5">
+                                <span>Gói dịch vụ đã tích chọn</span>
+                                <span id="total-duration-label"><i class="fa-regular fa-clock mr-1"></i> Tổng: 60 phút</span>
+                            </div>
+                            <div id="selected-services-chips" class="flex flex-wrap gap-2"></div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                <div>
+                                    <label class="block text-sm font-bold text-slate-800 mb-1.5">Họ tên khách hàng <span class="text-red-500">*</span></label>
+                                    <input type="text" id="inp-customer" oninput="updateLiveSummary()" placeholder="Nhập họ tên..." class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-base text-slate-900 focus:bg-white focus:border-brand-600 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-bold text-slate-800 mb-1.5">Số điện thoại <span class="text-red-500">*</span></label>
+                                    <input type="tel" id="inp-phone" oninput="updateLiveSummary()" placeholder="Nhập số điện thoại..." class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-base text-slate-900 focus:bg-white focus:border-brand-600 focus:outline-none">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                <div>
+                                    <label class="block text-sm font-bold text-slate-800 mb-1.5">Biển số xe <span class="text-red-500">*</span></label>
+                                    <input type="text" id="inp-plate" oninput="updateLiveSummary()" placeholder="VD: 51K-888.99" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-base font-bold uppercase text-slate-900 focus:bg-white focus:border-brand-600 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-bold text-slate-800 mb-1.5">Hãng & Dòng xe</label>
+                                    <input type="text" id="inp-model" oninput="updateLiveSummary()" placeholder="VD: Mazda CX-5" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-base text-slate-900 focus:bg-white focus:border-brand-600 focus:outline-none">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-bold text-slate-800 mb-1.5">Ngày hẹn đưa xe tới xưởng <span class="text-red-500">*</span></label>
+                                <input type="date" id="inp-date" value="2026-11-18" onchange="updateLiveSummary()" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-brand-600 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center mb-2.5">
+                                <label class="text-sm font-bold text-slate-800">Chọn khung giờ trống (F07)</label>
+                                <span class="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-lg">Tối đa 3 xe / giờ</span>
+                            </div>
+                            <div id="slot-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5"></div>
+                        </div>
+
+                        <!-- CHỌN PHƯƠNG THỨC THANH TOÁN COD HOẶC TRẢ TRƯỚC -->
+                        <div>
+                            <label class="block text-sm font-bold text-slate-800 mb-2.5">Phương thức thanh toán</label>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div id="pay-cod" onclick="selectPayment('COD')" class="cursor-pointer rounded-2xl p-3.5 border-2 border-brand-600 bg-brand-50/60 transition flex items-start space-x-3">
+                                    <i class="fa-solid fa-money-bill-wave text-brand-600 text-lg mt-0.5"></i>
+                                    <div>
+                                        <div class="text-sm font-extrabold text-slate-900">Tại xưởng (COD)</div>
+                                        <div class="text-xs text-slate-500 mt-0.5">Sửa xong nghiệm thu mới trả tiền</div>
+                                    </div>
+                                </div>
+                                <div id="pay-prepaid" onclick="selectPayment('PREPAID')" class="cursor-pointer rounded-2xl p-3.5 border border-slate-300 bg-white hover:border-brand-400 transition flex items-start space-x-3">
+                                    <i class="fa-solid fa-qrcode text-accent-500 text-lg mt-0.5"></i>
+                                    <div>
+                                        <div class="text-sm font-extrabold text-slate-900">Trả trước (QR/Thẻ)</div>
+                                        <div class="text-xs text-slate-500 mt-0.5">Ưu tiên giữ cầu nâng ngay</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="qr-payment-box" class="hidden mt-3 p-4 rounded-2xl bg-slate-900 text-white text-xs space-y-1.5">
+                                <div class="font-bold text-amber-400"><i class="fa-solid fa-building-columns mr-2"></i>Chuyển khoản giữ chỗ ưu tiên:</div>
+                                <div>• Ngân hàng: <strong>MB Bank</strong> — STK: <strong>888899996666</strong></div>
+                                <div>• Chủ TK: <strong>TRUNG TAM DICH VU O TO XYZ</strong></div>
+                                <div class="text-slate-300 italic">• Nội dung: Biển số xe + SĐT</div>
+                            </div>
+                        </div>
+
+                        <div class="border-t border-slate-200 pt-4 space-y-3">
+                            <div class="flex justify-between items-center text-sm text-slate-600">
+                                <span>Khung giờ hẹn:</span>
+                                <strong id="sum-slot-text" class="text-brand-600 font-extrabold">10:00 - 11:00 (2026-11-18)</strong>
+                            </div>
+                            <div class="flex justify-between items-baseline">
+                                <span class="text-sm font-extrabold uppercase text-slate-700">Tổng chi phí tạm tính:</span>
+                                <span id="sum-total-price" class="text-2xl font-extrabold text-accent-600">1.250.000 đ</span>
+                            </div>
+
+                            <button onclick="handleCreateBooking()" class="w-full bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-600 text-white font-extrabold py-4 rounded-2xl text-base shadow-xl transition flex items-center justify-center">
+                                <i class="fa-solid fa-circle-check mr-2 text-lg"></i> XÁC NHẬN ĐẶT LỊCH NGAY
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- VIEW 2: TRA CỨU & HỦY/ĐỔI LỊCH -->
+    <section id="view-tracking" class="view-section">
+        <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-md border border-slate-200 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <span class="bg-brand-100 text-brand-700 text-xs font-extrabold px-3 py-1 rounded-full">Module F05 & F06</span>
+                <h2 class="text-2xl font-extrabold text-slate-900 mt-2">Lịch Hẹn Đã Đặt & Theo Dõi Tiến Độ</h2>
+                <p class="text-sm text-slate-500 mt-1">Chỉ giữ 01 bản ghi mẫu duy nhất để làm tài liệu báo cáo.</p>
+            </div>
+            <div class="relative w-full md:w-80">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="search-tracking-input" oninput="renderTrackingCards()" placeholder="Tìm theo biển số hoặc SĐT..." class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-base focus:bg-white focus:border-brand-600 focus:outline-none">
+            </div>
+        </div>
+        <div id="tracking-cards-container" class="space-y-5"></div>
+    </section>
+
+    <!-- VIEW 3: TRANG QUẢN TRỊ XƯỞNG (CHỈ HIỆN KHI ĐĂNG NHẬP NHÂN VIÊN / ADMIN) -->
+    <section id="view-admin" class="view-section">
+        <div class="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-xl">
+            <div>
+                <span class="bg-amber-400 text-slate-900 text-xs font-extrabold px-3 py-1 rounded-full uppercase">Khu vực nội bộ — Nhân viên & Quản lý</span>
+                <h2 class="text-2xl sm:text-3xl font-extrabold mt-2">Bảng Điều Phối Lịch Hẹn & Báo Cáo Thống Kê</h2>
+                <p class="text-sm text-slate-300 mt-1">Tiếp nhận duyệt lịch (F04), quản lý dịch vụ (F01) và thống kê công suất (F08).</p>
+            </div>
+            <button onclick="openNewServiceModal()" class="bg-brand-600 hover:bg-brand-500 text-white text-sm font-extrabold px-5 py-3 rounded-2xl shadow-lg transition shrink-0">
+                <i class="fa-solid fa-plus mr-2"></i> Thêm Dịch Vụ Mới (F01)
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                    <span class="text-xs font-extrabold text-slate-400 uppercase">Tổng Phiếu Hẹn</span>
+                    <div id="kpi-total" class="text-3xl font-extrabold text-slate-900 mt-1">1</div>
+                </div>
+                <div class="w-14 h-14 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center text-2xl"><i class="fa-solid fa-calendar-check"></i></div>
+            </div>
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                    <span class="text-xs font-extrabold text-slate-400 uppercase">Chờ Xác Nhận (F04)</span>
+                    <div id="kpi-pending" class="text-3xl font-extrabold text-amber-500 mt-1">1</div>
+                </div>
+                <div class="w-14 h-14 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center text-2xl"><i class="fa-solid fa-clock"></i></div>
+            </div>
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                    <span class="text-xs font-extrabold text-slate-400 uppercase">Đã Duyệt / Đang Sửa</span>
+                    <div id="kpi-confirmed" class="text-3xl font-extrabold text-emerald-600 mt-1">0</div>
+                </div>
+                <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+            </div>
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                    <span class="text-xs font-extrabold text-slate-400 uppercase">Giới Hạn Xưởng (F07)</span>
+                    <div class="text-3xl font-extrabold text-brand-700 mt-1">3 Xe/Giờ</div>
+                </div>
+                <div class="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-2xl"><i class="fa-solid fa-shield-halved"></i></div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-md border border-slate-200 overflow-hidden mb-8">
+            <div class="px-6 py-5 border-b border-slate-200 flex flex-wrap justify-between items-center gap-3">
+                <h3 class="font-extrabold text-slate-900 text-lg">Danh Sách Khách Hàng Đặt Lịch (F04)</h3>
+                <select id="admin-filter-status" onchange="renderAdminTable()" class="bg-slate-50 border border-slate-300 rounded-xl px-4 py-2 text-sm font-bold text-slate-700">
+                    <option value="ALL">Tất cả trạng thái</option>
+                    <option value="PENDING">Chờ xác nhận (PENDING)</option>
+                    <option value="CONFIRMED">Đã xác nhận (CONFIRMED)</option>
+                    <option value="IN_PROGRESS">Đang sửa chữa (IN_PROGRESS)</option>
+                    <option value="COMPLETED">Hoàn thành (COMPLETED)</option>
+                    <option value="CANCELLED">Đã hủy / Từ chối</option>
+                </select>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-base">
+                    <thead>
+                    <tr class="bg-slate-100 text-slate-600 text-xs font-extrabold uppercase tracking-wider border-b border-slate-200">
+                        <th class="py-4 px-5">Mã Lịch</th>
+                        <th class="py-4 px-5">Khách Hàng & SĐT</th>
+                        <th class="py-4 px-5">Biển Số & Xe</th>
+                        <th class="py-4 px-5">Dịch Vụ & Thanh Toán</th>
+                        <th class="py-4 px-5">Ngày & Giờ Hẹn</th>
+                        <th class="py-4 px-5">Trạng Thái</th>
+                        <th class="py-4 px-5 text-center">Xử Lý (F04)</th>
+                    </tr>
+                    </thead>
+                    <tbody id="admin-tbody" class="divide-y divide-slate-200 text-slate-800 text-sm"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+                <h3 class="font-extrabold text-slate-900 text-base mb-4">Số Lượng Xe Đặt Theo Khung Giờ (F07, F08)</h3>
+                <canvas id="slotBarChart" height="170"></canvas>
+            </div>
+            <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+                <h3 class="font-extrabold text-slate-900 text-base mb-4">Cơ Cấu Nhóm Dịch Vụ (F08)</h3>
+                <div class="max-w-[260px] mx-auto">
+                    <canvas id="serviceDoughnutChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<!-- FOOTER -->
+<footer class="bg-slate-900 text-slate-400 text-sm py-6 mt-12 border-t border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+        <div><strong class="text-white">XYZ AUTOCARE ONLINE</strong> — Hệ thống quản lý đặt lịch bảo dưỡng ô tô</div>
+        <div>Java Spring Boot • PostgreSQL • Phân quyền Khách hàng / Admin</div>
+    </div>
+</footer>
+
+<!-- MODAL PHÂN QUYỀN TÀI KHOẢN (F09) -->
+<div id="modal-auth" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-7 relative">
+        <button onclick="closeAuthModal()" class="absolute top-5 right-5 w-9 h-9 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center justify-center">
+            <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+        <h3 class="text-xl font-extrabold text-slate-900 mb-2">Chuyển Đổi Tài Khoản (F09)</h3>
+        <p class="text-sm text-slate-600 mb-5">Trang Quản trị viên mặc định ẩn với Khách hàng. Chọn Nhân viên hoặc Admin để mở khóa:</p>
+
+        <div class="space-y-3 mb-6">
+            <button onclick="switchRole('Khách hàng', 'CUSTOMER')" class="w-full p-4 rounded-2xl border-2 border-slate-200 hover:border-brand-600 hover:bg-brand-50 text-left transition flex items-center justify-between">
+                <div>
+                    <div class="text-base font-extrabold text-slate-900">1. Tài khoản Khách Hàng</div>
+                    <div class="text-xs text-slate-500 mt-0.5">Ẩn hoàn toàn trang Quản trị viên</div>
+                </div>
+                <i class="fa-solid fa-user text-brand-600 text-xl"></i>
+            </button>
+            <button onclick="switchRole('Nhân viên tiếp nhận', 'STAFF')" class="w-full p-4 rounded-2xl border-2 border-slate-200 hover:border-amber-500 hover:bg-amber-50 text-left transition flex items-center justify-between">
+                <div>
+                    <div class="text-base font-extrabold text-slate-900">2. Tài khoản Nhân Viên Xưởng</div>
+                    <div class="text-xs text-slate-500 mt-0.5">Mở khóa trang Quản trị & Duyệt lịch hẹn (F04)</div>
+                </div>
+                <i class="fa-solid fa-headset text-amber-500 text-xl"></i>
+            </button>
+            <button onclick="switchRole('Quản trị viên (Admin)', 'ADMIN')" class="w-full p-4 rounded-2xl border-2 border-slate-200 hover:border-emerald-600 hover:bg-emerald-50 text-left transition flex items-center justify-between">
+                <div>
+                    <div class="text-base font-extrabold text-slate-900">3. Tài khoản Quản Lý (Admin)</div>
+                    <div class="text-xs text-slate-500 mt-0.5">Toàn quyền: Quản trị, Thêm dịch vụ & Thống kê</div>
+                </div>
+                <i class="fa-solid fa-user-shield text-emerald-600 text-xl"></i>
+            </button>
+        </div>
+        <button onclick="closeAuthModal()" class="w-full bg-slate-900 text-white font-bold py-3.5 rounded-xl text-sm">Đóng</button>
+    </div>
+</div>
+
+<!-- MODAL THÊM DỊCH VỤ (F01) -->
+<div id="modal-service" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-7 relative">
+        <button onclick="closeNewServiceModal()" class="absolute top-5 right-5 w-9 h-9 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center justify-center">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        <h3 class="text-xl font-extrabold text-slate-900 mb-4">Thêm Gói Dịch Vụ Mới (F01)</h3>
+        <div class="space-y-4 mb-6">
+            <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1">Tên gói dịch vụ</label>
+                <input type="text" id="new-svc-name" placeholder="VD: Bảo dưỡng mốc 20.000 km" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-base focus:bg-white focus:outline-none">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">Danh mục</label>
+                    <select id="new-svc-cat" class="w-full px-3 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold">
+                        <option value="Bảo dưỡng định kỳ">Bảo dưỡng định kỳ</option>
+                        <option value="Động cơ & Dầu máy">Động cơ & Dầu máy</option>
+                        <option value="Phanh & An toàn">Phanh & An toàn</option>
+                        <option value="Điện & Điều hòa">Điện & Điều hòa</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">Thời lượng (phút)</label>
+                    <input type="number" id="new-svc-duration" placeholder="VD: 90" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-base focus:bg-white focus:outline-none">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1">Giá tham khảo (VNĐ)</label>
+                <input type="number" id="new-svc-price" placeholder="VD: 1850000" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-base focus:bg-white focus:outline-none">
+            </div>
+        </div>
+        <button onclick="saveNewService()" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-extrabold py-3.5 rounded-xl text-base shadow-lg">Lưu Vào Hệ Thống</button>
+    </div>
+</div>
+
+<script>
+    let currentRoleCode = 'CUSTOMER';
+    let currentPaymentMethod = 'COD';
+
+    const services = [
+        { id: 1, name: "Bảo dưỡng định kỳ mốc 10.000 km", category: "Bảo dưỡng định kỳ", duration: 60, price: 1250000, icon: "fa-car-side", selected: true, desc: "Thay dầu máy, vệ sinh lọc gió động cơ & điều hòa, kiểm tra 20 hạng mục an toàn." },
+        { id: 2, name: "Thay dầu động cơ tổng hợp & Lọc dầu", category: "Động cơ & Dầu máy", duration: 30, price: 650000, icon: "fa-oil-can", selected: false, desc: "Sử dụng dầu tổng hợp 5W-30 chính hãng, tặng kèm kiểm tra nước làm mát." },
+        { id: 3, name: "Bảo dưỡng hệ thống phanh 4 bánh", category: "Phanh & An toàn", duration: 45, price: 500000, icon: "fa-circle-dot", selected: false, desc: "Vệ sinh má phanh, láng đĩa phanh, kiểm tra và châm dầu phanh DOT4." },
+        { id: 4, name: "Chẩn đoán lỗi ECU & Sửa chữa động cơ", category: "Động cơ & Dầu máy", duration: 120, price: 900000, icon: "fa-microchip", selected: false, desc: "Quét lỗi điện tử bằng máy chuyên dụng, kiểm tra bugi, kim phun nhiên liệu." },
+        { id: 5, name: "Nội soi vệ sinh dàn lạnh điều hòa", category: "Điện & Điều hòa", duration: 45, price: 450000, icon: "fa-snowflake", selected: false, desc: "Làm sạch dàn lạnh bằng camera nội soi, khử mùi diệt khuẩn cabin." }
+    ];
+
+    const timeSlots = [
+        { id: 1, time: "08:00 - 09:00", booked: 0, max: 3, selected: false },
+        { id: 2, time: "09:00 - 10:00", booked: 3, max: 3, selected: false },
+        { id: 3, time: "10:00 - 11:00", booked: 1, max: 3, selected: true },
+        { id: 4, time: "13:30 - 14:30", booked: 0, max: 3, selected: false },
+        { id: 5, time: "14:30 - 15:30", booked: 0, max: 3, selected: false },
+        { id: 6, time: "15:30 - 16:30", booked: 0, max: 3, selected: false }
+    ];
+
+    // CHỈ GIỮ ĐÚNG 01 DỮ LIỆU MẪU DUY NHẤT
+    let appointments = [
+        {
+            id: "LH-001",
+            customer: "Nguyễn Văn A (Mẫu báo cáo)",
+            phone: "0909 123 456",
+            plate: "51K-888.99",
+            model: "Mazda CX-5",
+            date: "2026-11-18",
+            slotId: 3,
+            slotTime: "10:00 - 11:00",
+            services: ["Bảo dưỡng định kỳ mốc 10.000 km"],
+            totalPrice: 1250000,
+            paymentMethod: "COD (Thanh toán tại xưởng)",
+            status: "PENDING"
+        }
+    ];
+
+    let barChartInstance = null;
+
+    function formatVND(num) { return num.toLocaleString('vi-VN') + ' đ'; }
+
+    function selectPayment(method) {
+        currentPaymentMethod = method;
+        const codBox = document.getElementById('pay-cod');
+        const preBox = document.getElementById('pay-prepaid');
+        const qrBox = document.getElementById('qr-payment-box');
+
+        if (method === 'COD') {
+            codBox.className = 'cursor-pointer rounded-2xl p-3.5 border-2 border-brand-600 bg-brand-50/60 transition flex items-start space-x-3';
+            preBox.className = 'cursor-pointer rounded-2xl p-3.5 border border-slate-300 bg-white hover:border-brand-400 transition flex items-start space-x-3';
+            qrBox.classList.add('hidden');
+        } else {
+            preBox.className = 'cursor-pointer rounded-2xl p-3.5 border-2 border-accent-500 bg-orange-50/60 transition flex items-start space-x-3';
+            codBox.className = 'cursor-pointer rounded-2xl p-3.5 border border-slate-300 bg-white hover:border-brand-400 transition flex items-start space-x-3';
+            qrBox.classList.remove('hidden');
+        }
+    }
+
+    function renderUnifiedServices() {
+        const listEl = document.getElementById('unified-service-list');
+        const keyword = document.getElementById('search-service-input').value.toLowerCase();
+        const catFilter = document.getElementById('filter-category-select').value;
+
+        const filtered = services.filter(s => {
+            const matchKw = s.name.toLowerCase().includes(keyword) || s.desc.toLowerCase().includes(keyword);
+            const matchCat = (catFilter === 'ALL') || (s.category === catFilter);
+            return matchKw && matchCat;
+        });
+
+        listEl.innerHTML = '';
+        filtered.forEach(s => {
+            const activeCard = s.selected
+                ? 'border-2 border-brand-600 bg-brand-50/50 shadow-md'
+                : 'border border-slate-200 bg-slate-50/60 hover:bg-white hover:border-brand-400';
+
+            const checkIcon = s.selected
+                ? '<span class="w-7 h-7 rounded-xl bg-brand-600 text-white flex items-center justify-center text-sm shadow"><i class="fa-solid fa-check"></i></span>'
+                : '<span class="w-7 h-7 rounded-xl border-2 border-slate-300 bg-white text-transparent flex items-center justify-center text-sm">✓</span>';
+
+            listEl.innerHTML += `
+                <div onclick="toggleService(${s.id})" class="cursor-pointer rounded-2xl p-5 transition-all flex items-start justify-between gap-4 ${activeCard}">
+                    <div class="flex items-start space-x-4">
+                        <div class="w-12 h-12 rounded-2xl ${s.selected ? 'bg-brand-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'} flex items-center justify-center text-lg shrink-0 transition">
+                            <i class="fa-solid ${s.icon}"></i>
+                        </div>
+                        <div>
+                            <div class="flex flex-wrap items-center gap-2 mb-1">
+                                <span class="text-xs font-bold px-2.5 py-0.5 rounded-lg bg-slate-200/80 text-slate-700">${s.category}</span>
+                                <span class="text-xs font-bold text-brand-600"><i class="fa-regular fa-clock mr-1"></i>${s.duration} phút</span>
+                            </div>
+                            <h3 class="font-extrabold text-slate-900 text-base sm:text-lg">${s.name}</h3>
+                            <p class="text-sm text-slate-600 mt-1 leading-relaxed">${s.desc}</p>
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0 flex flex-col items-end justify-between self-stretch">
+                        ${checkIcon}
+                        <div class="mt-3">
+                            <span class="text-[11px] text-slate-400 font-bold uppercase block">Giá tham khảo</span>
+                            <span class="text-base sm:text-lg font-extrabold text-brand-700">${formatVND(s.price)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        updateLiveSummary();
+    }
+
+    function toggleService(id) {
+        const item = services.find(x => x.id === id);
+        if (item) { item.selected = !item.selected; renderUnifiedServices(); }
+    }
+
+    function renderSlots() {
+        const grid = document.getElementById('slot-grid');
+        grid.innerHTML = '';
+        timeSlots.forEach(s => {
+            const isFull = s.booked >= s.max;
+            if (isFull) {
+                grid.innerHTML += `
+                    <div class="p-3 rounded-2xl border border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed text-center">
+                        <div class="text-sm font-bold line-through">${s.time}</div>
+                        <div class="text-xs font-extrabold text-red-500 mt-1"><i class="fa-solid fa-lock mr-1"></i>Đầy (${s.booked}/${s.max})</div>
+                    </div>
+                `;
+            } else {
+                const activeCls = s.selected
+                    ? 'border-2 border-accent-500 bg-orange-50 text-accent-600 shadow-sm'
+                    : 'border border-emerald-300 bg-emerald-50/70 text-emerald-900 hover:border-emerald-500';
+                grid.innerHTML += `
+                    <div onclick="selectSlot(${s.id})" class="p-3 rounded-2xl cursor-pointer transition text-center ${activeCls}">
+                        <div class="text-sm font-extrabold">${s.time}</div>
+                        <div class="text-xs font-bold mt-1">${s.selected ? '★ Đang chọn' : `Trống ${s.max - s.booked}/${s.max} chỗ`}</div>
+                    </div>
+                `;
+            }
+        });
+        updateLiveSummary();
+    }
+
+    function selectSlot(id) {
+        timeSlots.forEach(s => s.selected = (s.id === id));
+        renderSlots();
+    }
+
+    function updateLiveSummary() {
+        const chosenServices = services.filter(s => s.selected);
+        const chipsEl = document.getElementById('selected-services-chips');
+        const countBadge = document.getElementById('selected-count-badge');
+        const durationLabel = document.getElementById('total-duration-label');
+        const priceLabel = document.getElementById('sum-total-price');
+
+        countBadge.innerText = `Đã chọn ${chosenServices.length} dịch vụ`;
+
+        if (chosenServices.length === 0) {
+            chipsEl.innerHTML = `<span class="text-sm text-red-600 font-bold">Vui lòng chọn ít nhất 1 dịch vụ ở bên trái!</span>`;
+            durationLabel.innerHTML = `0 phút`;
+            priceLabel.innerText = '0 đ';
+        } else {
+            let totalMin = 0, totalMoney = 0;
+            chipsEl.innerHTML = '';
+            chosenServices.forEach(s => {
+                totalMin += s.duration;
+                totalMoney += s.price;
+                chipsEl.innerHTML += `
+                    <span class="inline-flex items-center bg-white border border-brand-300 text-brand-700 text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm">
+                        ${s.name}
+                        <button onclick="toggleService(${s.id})" class="ml-2 text-slate-400 hover:text-red-500"><i class="fa-solid fa-xmark"></i></button>
+                    </span>
+                `;
+            });
+            durationLabel.innerHTML = `<i class="fa-regular fa-clock mr-1"></i> Tổng: ${totalMin} phút`;
+            priceLabel.innerText = formatVND(totalMoney);
+        }
+
+        const chosenSlot = timeSlots.find(s => s.selected);
+        const dateVal = document.getElementById('inp-date').value;
+        document.getElementById('sum-slot-text').innerText = chosenSlot ? `${chosenSlot.time} (${dateVal})` : 'Chưa chọn giờ';
+    }
+
+    async function handleCreateBooking() {
+        const chosenServices = services.filter(s => s.selected);
+        if (chosenServices.length === 0) { alert('Vui lòng chọn ít nhất 1 dịch vụ bảo dưỡng!'); return; }
+
+        const customer = document.getElementById('inp-customer').value.trim();
+        const phone = document.getElementById('inp-phone').value.trim();
+        const plate = document.getElementById('inp-plate').value.trim().toUpperCase();
+        const model = document.getElementById('inp-model').value.trim() || 'Ô tô khách hàng';
+        const dateVal = document.getElementById('inp-date').value;
+
+        if (!customer || !phone || !plate) { alert('Vui lòng nhập đầy đủ Họ tên, Số điện thoại và Biển số xe!'); return; }
+
+        const slot = timeSlots.find(s => s.selected);
+        if (!slot || slot.booked >= slot.max) { alert('Khung giờ này đã đầy 3/3 xe!'); return; }
+
+        const serviceNames = chosenServices.map(s => s.name);
+        const totalMoney = chosenServices.reduce((sum, s) => sum + s.price, 0);
+        const newCode = 'LH-00' + (appointments.length + 1);
+        const payLabel = currentPaymentMethod === 'COD' ? 'COD (Thanh toán tại xưởng)' : 'Trả trước (Chuyển khoản QR)';
+
+        slot.booked += 1;
+        appointments.unshift({
+            id: newCode, customer, phone, plate, model, date: dateVal,
+            slotId: slot.id, slotTime: slot.time, services: serviceNames,
+            totalPrice: totalMoney, paymentMethod: payLabel, status: 'PENDING'
+        });
+
+        document.getElementById('inp-customer').value = '';
+        document.getElementById('inp-phone').value = '';
+        document.getElementById('inp-plate').value = '';
+        document.getElementById('inp-model').value = '';
+
+        renderSlots();
+        renderTrackingCards();
+        renderAdminTable();
+        if (barChartInstance) {
+            barChartInstance.data.datasets[0].data = timeSlots.map(s => s.booked);
+            barChartInstance.update();
+        }
+        document.getElementById('nav-badge-count').innerText = appointments.length;
+
+        alert(`🎉 Đặt lịch thành công!\n• Mã phiếu: #${newCode}\n• Hình thức: ${payLabel}`);
+        switchView('tracking');
+    }
+
+    function renderTrackingCards() {
+        const container = document.getElementById('tracking-cards-container');
+        const kw = (document.getElementById('search-tracking-input').value || '').toLowerCase();
+        container.innerHTML = '';
+
+        const list = appointments.filter(a => a.plate.toLowerCase().includes(kw) || a.phone.toLowerCase().includes(kw) || a.customer.toLowerCase().includes(kw));
+
+        list.forEach(a => {
+            let statusBadge = '<span class="bg-amber-100 text-amber-800 text-sm font-extrabold px-3.5 py-1.5 rounded-full">⏳ Chờ xác nhận (PENDING)</span>';
+            if (a.status === 'CONFIRMED') statusBadge = '<span class="bg-blue-100 text-blue-700 text-sm font-extrabold px-3.5 py-1.5 rounded-full">✓ Đã xác nhận (CONFIRMED)</span>';
+            if (a.status === 'IN_PROGRESS') statusBadge = '<span class="bg-purple-100 text-purple-700 text-sm font-extrabold px-3.5 py-1.5 rounded-full">🔧 Đang sửa chữa (IN_PROGRESS)</span>';
+            if (a.status === 'COMPLETED') statusBadge = '<span class="bg-emerald-100 text-emerald-700 text-sm font-extrabold px-3.5 py-1.5 rounded-full">★ Hoàn thành (COMPLETED)</span>';
+            if (a.status === 'CANCELLED') statusBadge = '<span class="bg-red-100 text-red-700 text-sm font-extrabold px-3.5 py-1.5 rounded-full">✕ Đã hủy (CANCELLED)</span>';
+
+            container.innerHTML += `
+                <div class="bg-white rounded-3xl p-6 sm:p-7 shadow-md border border-slate-200">
+                    <div class="flex flex-wrap justify-between items-center gap-4 pb-5 border-b border-slate-200">
+                        <div class="flex items-center space-x-3.5">
+                            <span class="bg-slate-900 text-white text-sm font-extrabold px-3.5 py-2 rounded-xl">#${a.id}</span>
+                            <div>
+                                <h3 class="font-extrabold text-slate-900 text-lg">${a.customer} — <span class="text-brand-600">${a.plate}</span> (${a.model})</h3>
+                                <p class="text-sm text-slate-600 mt-0.5">📅 Ngày hẹn: <strong>${a.date}</strong> • ⏰ Khung giờ: <strong class="text-accent-600">${a.slotTime}</strong></p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2.5">
+                            ${statusBadge}
+                            ${(a.status === 'PENDING' || a.status === 'CONFIRMED') ? `
+                                <button onclick="rescheduleApp('${a.id}')" class="text-sm font-bold px-3.5 py-2 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-800">Đổi giờ (F05)</button>
+                                <button onclick="cancelApp('${a.id}')" class="text-sm font-bold px-3.5 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600">Hủy lịch (F05)</button>
+                            ` : ''}
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap justify-between items-center text-sm bg-slate-50 px-5 py-4 rounded-2xl mt-4 gap-2">
+                        <div><span class="text-slate-500 font-bold">Gói dịch vụ:</span> <strong class="text-slate-900">${a.services.join(' + ')}</strong></div>
+                        <div><span class="text-slate-500 font-bold">Thanh toán:</span> <strong class="text-brand-700">${a.paymentMethod}</strong></div>
+                        <div><span class="text-slate-500 font-bold">Tổng tiền:</span> <strong class="text-lg text-accent-600 font-extrabold">${formatVND(a.totalPrice)}</strong></div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    function rescheduleApp(id) {
+        const newTime = prompt('Nhập khung giờ mới muốn chuyển sang (VD: 13:30 - 14:30):', '13:30 - 14:30');
+        if (!newTime) return;
+        const app = appointments.find(x => x.id === id);
+        if (app) { app.slotTime = newTime; renderTrackingCards(); renderAdminTable(); }
+    }
+
+    function cancelApp(id) {
+        if (!confirm('Xác nhận hủy lịch hẹn này?')) return;
+        const app = appointments.find(x => x.id === id);
+        if (app && app.status !== 'CANCELLED') {
+            app.status = 'CANCELLED';
+            const slot = timeSlots.find(s => s.id === app.slotId);
+            if (slot && slot.booked > 0) slot.booked -= 1;
+            renderSlots(); renderTrackingCards(); renderAdminTable();
+        }
+    }
+
+    function renderAdminTable() {
+        const tbody = document.getElementById('admin-tbody');
+        const filterVal = document.getElementById('admin-filter-status').value;
+        tbody.innerHTML = '';
+        let pendingCnt = 0, confirmedCnt = 0;
+
+        appointments.forEach(a => {
+            if (a.status === 'PENDING') pendingCnt++;
+            if (a.status === 'CONFIRMED' || a.status === 'IN_PROGRESS') confirmedCnt++;
+            if (filterVal !== 'ALL' && a.status !== filterVal) return;
+
+            let badge = '<span class="bg-amber-100 text-amber-800 text-xs font-extrabold px-3 py-1 rounded-full">Chờ duyệt</span>';
+            if (a.status === 'CONFIRMED') badge = '<span class="bg-blue-100 text-blue-700 text-xs font-extrabold px-3 py-1 rounded-full">Đã xác nhận</span>';
+            if (a.status === 'IN_PROGRESS') badge = '<span class="bg-purple-100 text-purple-700 text-xs font-extrabold px-3 py-1 rounded-full">Đang sửa chữa</span>';
+            if (a.status === 'COMPLETED') badge = '<span class="bg-emerald-100 text-emerald-700 text-xs font-extrabold px-3 py-1 rounded-full">Hoàn thành</span>';
+            if (a.status === 'CANCELLED') badge = '<span class="bg-red-100 text-red-700 text-xs font-extrabold px-3 py-1 rounded-full">Đã hủy</span>';
+
+            tbody.innerHTML += `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="py-4 px-5 font-extrabold text-slate-900">#${a.id}</td>
+                    <td class="py-4 px-5"><div class="font-bold text-slate-900">${a.customer}</div><div class="text-xs text-slate-500 font-semibold">${a.phone}</div></td>
+                    <td class="py-4 px-5"><span class="font-extrabold text-brand-700 bg-brand-50 px-2.5 py-1 rounded-lg">${a.plate}</span><div class="text-xs text-slate-500 mt-1">${a.model}</div></td>
+                    <td class="py-4 px-5"><div class="font-bold text-slate-900">${a.services.join(' + ')}</div><div class="text-xs text-slate-500 mt-0.5">${a.paymentMethod} • <strong class="text-accent-600">${formatVND(a.totalPrice)}</strong></div></td>
+                    <td class="py-4 px-5"><div class="font-extrabold text-slate-900">${a.slotTime}</div><div class="text-xs text-slate-500">${a.date}</div></td>
+                    <td class="py-4 px-5">${badge}</td>
+                    <td class="py-4 px-5 text-center">
+                        <select onchange="updateAppStatus('${a.id}', this.value)" class="bg-white border-2 border-slate-300 rounded-xl px-3 py-2 text-xs font-extrabold text-slate-800">
+                            <option value="PENDING" ${a.status === 'PENDING' ? 'selected' : ''}>⏳ Chờ duyệt</option>
+                            <option value="CONFIRMED" ${a.status === 'CONFIRMED' ? 'selected' : ''}>✓ Xác nhận lịch</option>
+                            <option value="IN_PROGRESS" ${a.status === 'IN_PROGRESS' ? 'selected' : ''}>🔧 Đang sửa chữa</option>
+                            <option value="COMPLETED" ${a.status === 'COMPLETED' ? 'selected' : ''}>★ Hoàn thành</option>
+                            <option value="CANCELLED" ${a.status === 'CANCELLED' ? 'selected' : ''}>✕ Từ chối / Hủy</option>
+                        </select>
+                    </td>
+                </tr>
+            `;
+        });
+
+        document.getElementById('kpi-total').innerText = appointments.length;
+        document.getElementById('kpi-pending').innerText = pendingCnt;
+        document.getElementById('kpi-confirmed').innerText = confirmedCnt;
+    }
+
+    function updateAppStatus(id, newStatus) {
+        const app = appointments.find(x => x.id === id);
+        if (app) { app.status = newStatus; renderTrackingCards(); renderAdminTable(); }
+    }
+
+    function openAuthModal() { document.getElementById('modal-auth').classList.remove('hidden'); document.getElementById('modal-auth').classList.add('flex'); }
+    function closeAuthModal() { document.getElementById('modal-auth').classList.add('hidden'); document.getElementById('modal-auth').classList.remove('flex'); }
+
+    function switchRole(roleLabel, roleCode) {
+        currentRoleCode = roleCode;
+        document.getElementById('header-role-text').innerText = roleLabel;
+        const adminBtn = document.getElementById('btn-admin');
+        const addSvcBtn = document.getElementById('btn-add-service-portal');
+
+        if (roleCode === 'CUSTOMER') {
+            adminBtn.classList.add('hidden'); adminBtn.classList.remove('flex');
+            addSvcBtn.classList.add('hidden'); addSvcBtn.classList.remove('inline-flex');
+            closeAuthModal(); switchView('portal');
+        } else {
+            adminBtn.classList.remove('hidden'); adminBtn.classList.add('flex');
+            addSvcBtn.classList.remove('hidden'); addSvcBtn.classList.add('inline-flex');
+            closeAuthModal(); switchView('admin');
+        }
+    }
+
+    function openNewServiceModal() { document.getElementById('modal-service').classList.remove('hidden'); document.getElementById('modal-service').classList.add('flex'); }
+    function closeNewServiceModal() { document.getElementById('modal-service').classList.add('hidden'); document.getElementById('modal-service').classList.remove('flex'); }
+    function saveNewService() {
+        const name = document.getElementById('new-svc-name').value.trim();
+        const cat = document.getElementById('new-svc-cat').value;
+        const duration = parseInt(document.getElementById('new-svc-duration').value) || 60;
+        const price = parseInt(document.getElementById('new-svc-price').value) || 900000;
+        if (!name) { alert('Vui lòng nhập tên dịch vụ!'); return; }
+
+        services.unshift({
+            id: services.length + 1, name, category: cat, duration, price,
+            icon: 'fa-screwdriver-wrench', selected: true, desc: 'Dịch vụ mới được bổ sung bởi Quản trị viên.'
+        });
+        document.getElementById('new-svc-name').value = '';
+        closeNewServiceModal(); renderUnifiedServices();
+    }
+
+    function switchView(viewName) {
+        if (viewName === 'admin' && currentRoleCode === 'CUSTOMER') {
+            alert('Khu vực này chỉ dành cho Nhân viên tiếp nhận và Quản trị viên!');
+            return;
+        }
+        document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.nav-pill').forEach(btn => {
+            if (!btn.classList.contains('hidden')) {
+                btn.className = 'nav-pill px-5 py-2.5 rounded-xl text-sm font-bold transition flex items-center text-slate-300 hover:text-white';
+            }
+        });
+
+        document.getElementById('view-' + viewName).classList.add('active');
+        const activeBtn = document.getElementById('btn-' + viewName);
+        if (activeBtn && !activeBtn.classList.contains('hidden')) {
+            activeBtn.className = 'nav-pill px-5 py-2.5 rounded-xl text-sm font-bold transition flex items-center bg-brand-600 text-white shadow-md';
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    window.onload = function() {
+        renderUnifiedServices();
+        renderSlots();
+        renderTrackingCards();
+        renderAdminTable();
+
+        barChartInstance = new Chart(document.getElementById('slotBarChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: timeSlots```html
+<!DOCTYPE html>
+<html lang="vi" class="scroll-smooth">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XYZ AutoCare — Đặt Lịch & Quản Lý Dịch Vụ Ô Tô</title>
+<script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+<link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css)">
+<link href="[https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap](https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap)" rel="stylesheet">
+<script src="[https://cdn.jsdelivr.net/npm/chart.js](https://cdn.jsdelivr.net/npm/chart.js)"></script>
+<script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                fontFamily: {
+                    sans: ['"Be Vietnam Pro"', 'sans-serif'],
+                },
+                colors: {
+                    brand: {
+                        50: '#eff6ff',
+                        100: '#dbeafe',
+                        500: '#3b82f6',
+                        600: '#2563eb',
+                        700: '#1d4ed8',
+                        900: '#0f172a',
+                    },
+                    accent: {
+                        500: '#f97316',
+                        600: '#ea580c',
+                    }
+                }
+            }
+        }
+    }
+</script>
+<style>
+    html { font-size: 16.5px; }
+    body {
+        background-color: #f1f5f9;
+        background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+        background-size: 28px 28px;
+        color: #0f172a;
+    }
+    ::placeholder {
+        color: #94a3b8 !important;
+        opacity: 0.65 !important;
+        font-weight: 400;
+    }
+    input:focus::placeholder, textarea:focus::placeholder {
+        opacity: 0.35 !important;
+    }
+    .view-section { display: none; }
+    .view-section.active {
+        display: block;
+        animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .glass-nav {
+        background: rgba(15, 23, 42, 0.94);
+        backdrop-filter: blur(16px);
+    }
+</style>
+</head>
+<body class="antialiased min-h-screen flex flex-col justify-between">
+
+<!-- HEADER -->
+<header class="glass-nav text-white sticky top-0 z-50 border-b border-slate-800 shadow-xl">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap justify-between items-center gap-4">
+        <div class="flex items-center space-x-3.5 cursor-pointer group" onclick="switchView('portal')">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 to-accent-500 flex items-center justify-center shadow-lg shadow-brand-500/30 group-hover:scale-105 transition">
+                <i class="fa-solid fa-car-side text-white text-xl"></i>
+            </div>
+            <div>
+                <div class="flex items-center space-x-2">
+                    <span class="font-extrabold text-xl tracking-tight text-white">XYZ AUTOCARE</span>
+                    <span class="bg-accent-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">v3.0</span>
+                </div>
+                <p class="text-xs text-slate-300 font-medium mt-0.5">Trung Tâm Bảo Dưỡng & Sửa Chữa Ô Tô Trực Tuyến</p>
+            </div>
+        </div>
+
+        <nav class="flex items-center bg-slate-800/90 p-1.5 rounded-2xl border border-slate-700">
+            <button id="btn-portal" onclick="switchView('portal')" class="nav-pill px-5 py-2.5 rounded-xl text-sm font-bold transition flex items-center bg-brand-600 text-white shadow-md">
+                <i class="fa-solid fa-calendar-plus mr-2"></i> Dịch Vụ & Đặt Lịch
+            </button>
+            <button id="btn-tracking" onclick="switchView('tracking')" class="nav-pill px-5 py-2.5 rounded-xl text-sm font-bold transition flex items-center text-slate-300 hover:text-white">
+                <i class="fa-solid fa-clock-rotate-left mr-2"></i> Tra Cứu & Đổi/Hủy
+                <span id="nav-badge-count" class="ml-2 bg-accent-500 text-white text-xs font-extrabold px-2 py-0.5 rounded-full">1</span>
+            </button>
+            <button id="btn-admin" onclick="switchView('admin')" class="nav-pill hidden px-5 py-2.5 rounded-xl text-sm font-bold transition items-center text-amber-400 hover:text-white">
+                <i class="fa-solid fa-user-shield mr-2"></i> Quản Trị Xưởng (Admin)
+            </button>
+        </nav>
+
+        <div class="flex items-center space-x-3">
+            <div class="hidden sm:flex items-center space-x-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl text-sm">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span class="text-slate-300">Tài khoản:</span>
+                <strong id="header-role-text" class="text-white font-bold">Khách hàng</strong>
+            </div>
+            <button onclick="openAuthModal()" class="bg-accent-500 hover:bg-accent-600 text-white text-sm font-bold px-4 py-2.5 rounded-xl transition flex items-center shadow-lg shadow-accent-500/20">
+                <i class="fa-solid fa-right-to-bracket mr-2"></i> Đổi Vai Trò (F09)
+            </button>
+        </div>
+    </div>
+</header>
+
+<!-- MAIN CONTENT -->
+<main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- VIEW 1: DỊCH VỤ & ĐẶT LỊCH GỘP CHUNG + THANH TOÁN COD/QR -->
+    <section id="view-portal" class="view-section active">
+        <div class="relative rounded-3xl bg-gradient-to-r from-slate-900 via-brand-900 to-slate-900 text-white p-8 mb-8 overflow-hidden shadow-2xl border border-slate-800">
+            <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div class="max-w-2xl">
+                        <span class="inline-flex items-center bg-accent-500 text-white text-xs font-extrabold uppercase tracking-wider px-3.5 py-1.5 rounded-full mb-4 shadow">
+                            <i class="fa-solid fa-bolt mr-1.5"></i> Đặt lịch thông minh 1 chạm
+                        </span>
+                    <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
+                        Chọn Dịch Vụ & Đặt Lịch Bảo Dưỡng Ngay Trên Một Màn Hình
+                    </h1>
+                    <p class="text-slate-200 text-base mt-3 leading-relaxed">
+                        Bấm chọn gói dịch vụ bên trái, điền thông tin xe và chọn hình thức thanh toán (Tại xưởng COD hoặc Chuyển khoản giữ chỗ) ngay bên phải.
+                    </p>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 shrink-0">
+                    <div class="bg-white/10 backdrop-blur-md border border-white/15 p-4 rounded-2xl text-center">
+                        <div class="text-2xl font-extrabold text-white">03 Xe</div>
+                        <div class="text-xs text-slate-300 mt-1 font-medium">Tối đa / Khung giờ</div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-md border border-white/15 p-4 rounded-2xl text-center">
+                        <div class="text-2xl font-extrabold text-emerald-400">COD / QR</div>
+                        <div class="text-xs text-slate-300 mt-1 font-medium">Thanh toán linh hoạt</div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-md border border-white/15 p-4 rounded-2xl text-center col-span-2 sm:col-span-1">
+                        <div class="text-2xl font-extrabold text-amber-400">100%</div>
+                        <div class="text-xs text-slate-300 mt-1 font-medium">Đúng giờ cam kết</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <!-- CỘT TRÁI (7/12): DANH SÁCH DỊCH VỤ -->
+            <div class="lg:col-span-7 space-y-5">
+                <div class="bg-white rounded-3xl p-6 shadow-md border border-slate-200">
+                    <div class="flex flex-wrap justify-between items-center gap-3 mb-5">
+                        <div>
+                            <h2 class="text-xl font-extrabold text-slate-900 flex items-center">
+                                <span class="w-8 h-8 rounded-xl bg-brand-600 text-white inline-flex items-center justify-center mr-2.5 text-sm shadow">1</span>
+                                Chọn Gói Dịch Vụ Bảo Dưỡng & Sửa Chữa
+                            </h2>
+                            <p class="text-sm text-slate-500 mt-1">Bấm trực tiếp vào thẻ dịch vụ bên dưới để chọn hoặc bỏ chọn</p>
+                        </div>
+                        <button id="btn-add-service-portal" onclick="openNewServiceModal()" class="hidden text-sm font-bold text-white bg-brand-600 hover:bg-brand-700 px-4 py-2.5 rounded-xl transition items-center shadow">
+                            <i class="fa-solid fa-plus mr-2"></i> Thêm Dịch Vụ (F01)
+                        </button>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-3 mb-6">
+                        <div class="relative flex-grow">
+                            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-base"></i>
+                            <input type="text" id="search-service-input" oninput="renderUnifiedServices()" placeholder="Tìm nhanh dịch vụ (VD: Thay dầu, phanh, bảo dưỡng...)" class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-base text-slate-900 focus:bg-white focus:border-brand-600 focus:ring-4 focus:ring-brand-500/15 focus:outline-none transition">
+                        </div>
+                        <select id="filter-category-select" onchange="renderUnifiedServices()" class="bg-slate-50 border border-slate-300 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 focus:bg-white focus:border-brand-600 focus:outline-none">
+                            <option value="ALL">Tất cả danh mục</option>
+                            <option value="Bảo dưỡng định kỳ">Bảo dưỡng định kỳ</option>
+                            <option value="Động cơ & Dầu máy">Động cơ & Dầu máy</option>
+                            <option value="Phanh & An toàn">Phanh & An toàn</option>
+                            <option value="Điện & Điều hòa">Điện & Điều hòa</option>
+                        </select>
+                    </div>
+
+                    <div id="unified-service-list" class="space-y-3.5"></div>
+                </div>
+            </div>
+
+            <!-- CỘT PHẢI (5/12): FORM ĐẶT LỊCH & THANH TOÁN -->
+            <div class="lg:col-span-5 lg:sticky lg:top-24">
+                <div class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-900 text-white px-6 py-5 flex justify-between items-center">
+                        <h3 class="text-lg font-extrabold flex items-center">
+                            <span class="w-8 h-8 rounded-xl bg-accent-500 text-white inline-flex items-center justify-center mr-2.5 text-sm shadow">2</span>
+                            Thông Tin Xe & Thanh Toán
+                        </h3>
+                        <span id="selected-count-badge" class="bg-amber-400 text-slate-900 text-xs font-extrabold px-3 py-1 rounded-full">Đã chọn 1 dịch vụ</span>
+                    </div>
+
+                    <div class="p-6 space-y-5">
+                        <div class="bg-brand-50/70 rounded-2xl p-4 border border-brand-200">
+                            <div class="flex justify-between items-center text-xs font-extrabold text-brand-700 uppercase mb-2.5">
+                                <span>Gói dịch vụ đã tích chọn</span>
+                                <span id="total-duration-label"><i class="fa-regular fa-clock mr-1"></i> Tổng: 60 phút</span>
+                            </div>
+                            <div id="selected-services-chips" class="flex flex-wrap gap-2"></div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                <div>
+                                    <label class="block text-sm font-bold text-slate-800 mb-1.5">Họ tên khách hàng <span class="text-red-500">*</span></label>
+                                    <input type="text" id="inp-customer" oninput="updateLiveSummary()" placeholder="Nhập họ tên..." class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-base text-slate-900 focus:bg-white focus:border-brand-600 focus:ring-4 focus:ring-brand-500/15 focus:outline-none transition">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-bold text-slate-800 mb-1.5">Số điện thoại <span class="text-red-500">*</span></label>
+                                    <input type="tel" id="inp-phone" oninput="updateLiveSummary()" placeholder="Nhập số điện thoại..." class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-base text-slate-900 focus:bg-white focus:border-brand-600 focus:ring-4 focus:ring-brand-500/15 focus:outline-none transition">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                <div>
+                                    <label class="block text-sm font-bold text-slate-800 mb-1.5">Biển số xe <span class="text-red-500">*</span></label>
+                                    <input type="text" id="inp-plate" oninput="updateLiveSummary()" placeholder="VD: 51K-888.99" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-base font-bold uppercase text-slate-900 focus:bg-white focus:border-brand-600 focus:ring-4 focus:ring-brand-500/15 focus:outline-none transition">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-bold text-slate-800 mb-1.5">Hãng & Dòng xe</label>
+                                    <input type="text" id="inp-model" oninput="updateLiveSummary()" placeholder="VD: Mazda CX-5" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-base text-slate-900 focus:bg-white focus:border-brand-600 focus:ring-4 focus:ring-brand-500/15 focus:outline-none transition">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-bold text-slate-800 mb-1.5">Ngày hẹn đưa xe tới xưởng <span class="text-red-500">*</span></label>
+                                <input type="date" id="inp-date" value="2026-11-18" onchange="updateLiveSummary()" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-base font-bold text-slate-900 focus:bg-white focus:border-brand-600 focus:outline-none transition">
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center mb-2.5">
+                                <label class="text-sm font-bold text-slate-800">Chọn khung giờ trống (F07)</label>
+                                <span class="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-lg">Giới hạn 3 xe / giờ</span>
+                            </div>
+                            <div id="slot-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5"></div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-bold text-slate-800 mb-2.5">Phương thức thanh toán</label>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div id="pay-cod" onclick="selectPayment('COD')" class="cursor-pointer rounded-2xl p-3.5 border-2 border-brand-600 bg-brand-50/60 transition flex items-start space-x-3">
+                                    <i class="fa-solid fa-money-bill-wave text-brand-600 text-lg mt-0.5"></i>
+                                    <div>
+                                        <div class="text-sm font-extrabold text-slate-900">Tại xưởng (COD)</div>
+                                        <div class="text-xs text-slate-500 mt-0.5">Nghiệm thu xe xong mới thanh toán</div>
+                                    </div>
+                                </div>
+                                <div id="pay-prepaid" onclick="selectPayment('PREPAID')" class="cursor-pointer rounded-2xl p-3.5 border border-slate-300 bg-white hover:border-brand-400 transition flex items-start space-x-3">
+                                    <i class="fa-solid fa-qrcode text-accent-500 text-lg mt-0.5"></i>
+                                    <div>
+                                        <div class="text-sm font-extrabold text-slate-900">Trả trước (QR/Thẻ)</div>
+                                        <div class="text-xs text-slate-500 mt-0.5">Ưu tiên giữ cầu nâng ngay lập tức</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="qr-payment-box" class="hidden mt-3 p-4 rounded-2xl bg-slate-900 text-white text-xs space-y-1.5">
+                                <div class="font-bold text-amber-400 flex items-center"><i class="fa-solid fa-building-columns mr-2"></i>Thông tin chuyển khoản giữ chỗ trước:</div>
+                                <div>• Ngân hàng: <strong>MB Bank</strong> — STK: <strong>888899996666</strong></div>
+                                <div>• Chủ TK: <strong>TRUNG TAM DICH VU O TO XYZ</strong></div>
+                                <div class="text-slate-300 italic">• Nội dung: Biển số xe + SĐT đặt lịch</div>
+                            </div>
+                        </div>
+
+                        <div class="border-t border-slate-200 pt-4 space-y-3">
+                            <div class="flex justify-between items-center text-sm text-slate-600">
+                                <span>Khung giờ hẹn:</span>
+                                <strong id="sum-slot-text" class="text-brand-600 font-extrabold">10:00 - 11:00 (2026-11-18)</strong>
+                            </div>
+                            <div class="flex justify-between items-baseline">
+                                <span class="text-sm font-extrabold uppercase text-slate-700">Tổng chi phí tạm tính:</span>
+                                <span id="sum-total-price" class="text-2xl font-extrabold text-accent-600">1.250.000 đ</span>
+                            </div>
+
+                            <button onclick="handleCreateBooking()" class="w-full bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-600 text-white font-extrabold py-4 rounded-2xl text-base shadow-xl shadow-accent-500/25 transition flex items-center justify-center">
+                                <i class="fa-solid fa-circle-check mr-2 text-lg"></i>
+                                XÁC NHẬN ĐẶT LỊCH NGAY
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- VIEW 2: TRA CỨU TIẾN ĐỘ & ĐỔI/HỦY LỊCH (F05, F06) -->
+    <section id="view-tracking" class="view-section">
+        <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-md border border-slate-200 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <span class="bg-brand-100 text-brand-700 text-xs font-extrabold px-3 py-1 rounded-full">Module F05 & F06</span>
+                <h2 class="text-2xl font-extrabold text-slate-900 mt-2">Lịch Hẹn Đã Đặt & Theo Dõi Tiến Độ Sửa Chữa</h2>
+                <p class="text-sm text-slate-500 mt-1">Chỉ giữ 01 bản ghi mẫu duy nhất để làm tài liệu báo cáo.</p>
+            </div>
+            <div class="relative w-full md:w-80">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="search-tracking-input" oninput="renderTrackingCards()" placeholder="Tìm theo biển số hoặc SĐT..." class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl text-base focus:bg-white focus:border-brand-600 focus:outline-none">
+            </div>
+        </div>
+        <div id="tracking-cards-container" class="space-y-5"></div>
+    </section>
+
+    <!-- VIEW 3: QUẢN TRỊ XƯỞNG (CHỈ HIỆN VỚI NHÂN VIÊN / ADMIN) -->
+    <section id="view-admin" class="view-section">
+        <div class="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-xl">
+            <div>
+                <span class="bg-amber-400 text-slate-900 text-xs font-extrabold px-3 py-1 rounded-full uppercase">Khu vực nội bộ — Nhân viên & Quản lý</span>
+                <h2 class="text-2xl sm:text-3xl font-extrabold mt-2">Bảng Điều Phối Lịch Hẹn & Báo Cáo Thống Kê</h2>
+                <p class="text-sm text-slate-300 mt-1">Tiếp nhận xác nhận/từ chối lịch hẹn (F04), cập nhật danh mục dịch vụ (F01) và xem thống kê (F08).</p>
+            </div>
+            <button onclick="openNewServiceModal()" class="bg-brand-600 hover:bg-brand-500 text-white text-sm font-extrabold px-5 py-3 rounded-2xl shadow-lg transition shrink-0">
+                <i class="fa-solid fa-plus mr-2"></i> Thêm Dịch Vụ Mới (F01)
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                    <span class="text-xs font-extrabold text-slate-400 uppercase">Tổng Phiếu Hẹn</span>
+                    <div id="kpi-total" class="text-3xl font-extrabold text-slate-900 mt-1">1</div>
+                    <span class="text-xs text-emerald-600 font-bold mt-1 block">Dữ liệu thực tế</span>
+                </div>
+                <div class="w-14 h-14 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center text-2xl"><i class="fa-solid fa-calendar-check"></i></div>
+            </div>
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                    <span class="text-xs font-extrabold text-slate-400 uppercase">Chờ Xác Nhận (F04)</span>
+                    <div id="kpi-pending" class="text-3xl font-extrabold text-amber-500 mt-1">1</div>
+                    <span class="text-xs text-amber-600 font-bold mt-1 block">Cần xử lý ngay</span>
+                </div>
+                <div class="w-14 h-14 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center text-2xl"><i class="fa-solid fa-clock"></i></div>
+            </div>
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                    <span class="text-xs font-extrabold text-slate-400 uppercase">Đã Duyệt / Đang Sửa</span>
+                    <div id="kpi-confirmed" class="text-3xl font-extrabold text-emerald-600 mt-1">0</div>
+                    <span class="text-xs text-slate-500 font-bold mt-1 block">Trong giới hạn xưởng</span>
+                </div>
+                <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+            </div>
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                    <span class="text-xs font-extrabold text-slate-400 uppercase">Công Suất Tối Đa (F07)</span>
+                    <div class="text-3xl font-extrabold text-brand-700 mt-1">3 Xe/Giờ</div>
+                    <span class="text-xs text-slate-500 font-bold mt-1 block">Chống quá tải 100%</span>
+                </div>
+                <div class="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-2xl"><i class="fa-solid fa-shield-halved"></i></div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-md border border-slate-200 overflow-hidden mb-8">
+            <div class="px-6 py-5 border-b border-slate-200 flex flex-wrap justify-between items-center gap-3">
+                <h3 class="font-extrabold text-slate-900 text-lg">Danh Sách Khách Hàng Đặt Lịch</h3>
+                <select id="admin-filter-status" onchange="renderAdminTable()" class="bg-slate-50 border border-slate-300 rounded-xl px-4 py-2 text-sm font-bold text-slate-700">
+                    <option value="ALL">Tất cả trạng thái</option>
+                    <option value="PENDING">Chờ xác nhận (PENDING)</option>
+                    <option value="CONFIRMED">Đã xác nhận (CONFIRMED)</option>
+                    <option value="IN_PROGRESS">Đang sửa chữa (IN_PROGRESS)</option>
+                    <option value="COMPLETED">Hoàn thành (COMPLETED)</option>
+                    <option value="CANCELLED">Đã hủy / Từ chối</option>
+                </select>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-base">
+                    <thead>
+                    <tr class="bg-slate-100 text-slate-600 text-xs font-extrabold uppercase tracking-wider border-b border-slate-200">
+                        <th class="py-4 px-5">Mã Lịch</th>
+                        <th class="py-4 px-5">Khách Hàng & SĐT</th>
+                        <th class="py-4 px-5">Biển Số & Xe</th>
+                        <th class="py-4 px-5">Gói Dịch Vụ & Thanh Toán</th>
+                        <th class="py-4 px-5">Ngày & Giờ Hẹn</th>
+                        <th class="py-4 px-5">Trạng Thái</th>
+                        <th class="py-4 px-5 text-center">Duyệt / Cập Nhật (F04)</th>
+                    </tr>
+                    </thead>
+                    <tbody id="admin-tbody" class="divide-y divide-slate-200 text-slate-800 text-sm"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+                <h3 class="font-extrabold text-slate-900 text-base mb-4">Số Lượng Xe Đặt Theo Khung Giờ (F07, F08)</h3>
+                <canvas id="slotBarChart" height="170"></canvas>
+            </div>
+            <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+                <h3 class="font-extrabold text-slate-900 text-base mb-4">Cơ Cấu Nhóm Dịch Vụ Bảo Dưỡng (F08)</h3>
+                <div class="max-w-[260px] mx-auto">
+                    <canvas id="serviceDoughnutChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<!-- FOOTER -->
+<footer class="bg-slate-900 text-slate-400 text-sm py-6 mt-12 border-t border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+        <div><strong class="text-white">XYZ AUTOCARE ONLINE</strong> — Đồ án Quản lý dự án phần mềm</div>
+        <div>Java Spring Boot • PostgreSQL • Phân quyền Khách hàng / Admin</div>
+    </div>
+</footer>
+
+<!-- MODAL ĐỔI VAI TRÒ (F09) -->
+<div id="modal-auth" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-7 relative">
+        <button onclick="closeAuthModal()" class="absolute top-5 right-5 w-9 h-9 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center justify-center">
+            <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+        <div class="flex items-center space-x-3 mb-5">
+            <div class="w-12 h-12 rounded-2xl bg-brand-600 text-white flex items-center justify-center text-xl shadow">
+                <i class="fa-solid fa-user-lock"></i>
+            </div>
+            <div>
+                <span class="text-xs font-extrabold uppercase text-brand-600">Module F09</span>
+                <h3 class="text-xl font-extrabold text-slate-900">Chuyển Đổi Tài Khoản</h3>
+            </div>
+        </div>
+
+        <p class="text-sm text-slate-600 mb-4 leading-relaxed">
+            Khi ở vai trò <strong>Khách hàng</strong>, trang Quản trị viên bị ẩn hoàn toàn. Chọn <strong>Nhân viên</strong> hoặc <strong>Admin</strong> để mở khóa:
+        </p>
+
+        <div class="space-y-3 mb-6">
+            <button onclick="switchRole('Khách hàng', 'CUSTOMER')" class="w-full p-4 rounded-2xl border-2 border-slate-200 hover:border-brand-600 hover:bg-brand-50 text-left transition flex items-center justify-between">
+                <div>
+                    <div class="text-base font-extrabold text-slate-900">1. Tài khoản Khách Hàng</div>
+                    <div class="text-xs text-slate-500 mt-0.5">Chỉ hiện trang Đặt lịch & Tra cứu (Ẩn trang Admin)</div>
+                </div>
+                <i class="fa-solid fa-user text-brand-600 text-xl"></i>
+            </button>
+
+            <button onclick="switchRole('Nhân viên tiếp nhận', 'STAFF')" class="w-full p-4 rounded-2xl border-2 border-slate-200 hover:border-amber-500 hover:bg-amber-50 text-left transition flex items-center justify-between">
+                <div>
+                    <div class="text-base font-extrabold text-slate-900">2. Tài khoản Nhân Viên Xưởng</div>
+                    <div class="text-xs text-slate-500 mt-0.5">Mở khóa trang Quản trị để duyệt / từ chối lịch hẹn (F04)</div>
+                </div>
+                <i class="fa-solid fa-headset text-amber-500 text-xl"></i>
+            </button>
+
+            <button onclick="switchRole('Quản trị viên (Admin)', 'ADMIN')" class="w-full p-4 rounded-2xl border-2 border-slate-200 hover:border-emerald-600 hover:bg-emerald-50 text-left transition flex items-center justify-between">
+                <div>
+                    <div class="text-base font-extrabold text-slate-900">3. Tài khoản Quản Lý (Admin)</div>
+                    <div class="text-xs text-slate-500 mt-0.5">Toàn quyền: Mở khóa trang Admin, Thêm dịch vụ & Thống kê</div>
+                </div>
+                <i class="fa-solid fa-user-shield text-emerald-600 text-xl"></i>
+            </button>
+        </div>
+
+        <button onclick="closeAuthModal()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 rounded-xl text-sm transition">Đóng</button>
+    </div>
+</div>
+
+<!-- MODAL THÊM DỊCH VỤ (F01) -->
+<div id="modal-service" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-7 relative">
+        <button onclick="closeNewServiceModal()" class="absolute top-5 right-5 w-9 h-9 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center justify-center">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        <span class="text-xs font-extrabold uppercase text-brand-600">Module F01</span>
+        <h3 class="text-xl font-extrabold text-slate-900 mb-4">Thêm Gói Dịch Vụ Mới</h3>
+        <div class="space-y-4 mb-6">
+            <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1">Tên gói dịch vụ</label>
+                <input type="text" id="new-svc-name" placeholder="VD: Bảo dưỡng mốc 20.000 km" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-base focus:bg-white focus:border-brand-600 focus:outline-none">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">Danh mục</label>
+                    <select id="new-svc-cat" class="w-full px-3 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold">
+                        <option value="Bảo dưỡng định kỳ">Bảo dưỡng định kỳ</option>
+                        <option value="Động cơ & Dầu máy">Động cơ & Dầu máy</option>
+                        <option value="Phanh & An toàn">Phanh & An toàn</option>
+                        <option value="Điện & Điều hòa">Điện & Điều hòa</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">Thời lượng (phút)</label>
+                    <input type="number" id="new-svc-duration" placeholder="VD: 90" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-base focus:bg-white focus:border-brand-600 focus:outline-none">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1">Giá tham khảo (VNĐ)</label>
+                <input type="number" id="new-svc-price" placeholder="VD: 1850000" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-base focus:bg-white focus:border-brand-600 focus:outline-none">
+            </div>
+        </div>
+        <button onclick="saveNewService()" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-extrabold py-3.5 rounded-xl text-base shadow-lg transition">Lưu Vào Hệ Thống</button>
+    </div>
+</div>
+
+<script>
+    let currentRoleCode = 'CUSTOMER';
+    let currentPaymentMethod = 'COD';
+
+    const services = [
+        { id: 1, name: "Bảo dưỡng định kỳ mốc 10.000 km", category: "Bảo dưỡng định kỳ", duration: 60, price: 1250000, icon: "fa-car-side", selected: true, desc: "Thay dầu máy, vệ sinh lọc gió động cơ & điều hòa, kiểm tra 20 hạng mục an toàn." },
+        { id: 2, name: "Thay dầu động cơ tổng hợp & Lọc dầu", category: "Động cơ & Dầu máy", duration: 30, price: 650000, icon: "fa-oil-can", selected: false, desc: "Sử dụng dầu tổng hợp 5W-30 chính hãng, tặng kèm kiểm tra nước làm mát." },
+        { id: 3, name: "Bảo dưỡng hệ thống phanh 4 bánh", category: "Phanh & An toàn", duration: 45, price: 500000, icon: "fa-circle-dot", selected: false, desc: "Vệ sinh má phanh, láng đĩa phanh, kiểm tra và châm dầu phanh DOT4." },
+        { id: 4, name: "Chẩn đoán lỗi ECU & Sửa chữa động cơ", category: "Động cơ & Dầu máy", duration: 120, price: 900000, icon: "fa-microchip", selected: false, desc: "Quét lỗi điện tử bằng máy chuyên dụng, kiểm tra bugi, kim phun nhiên liệu." },
+        { id: 5, name: "Nội soi vệ sinh dàn lạnh điều hòa", category: "Điện & Điều hòa", duration: 45, price: 450000, icon: "fa-snowflake", selected: false, desc: "Làm sạch dàn lạnh bằng camera nội soi, khử mùi diệt khuẩn cabin." }
+    ];
+
+    const timeSlots = [
+        { id: 1, time: "08:00 - 09:00", booked: 0, max: 3, selected: false },
+        { id: 2, time: "09:00 - 10:00", booked: 3, max: 3, selected: false },
+        { id: 3, time: "10:00 - 11:00", booked: 1, max: 3, selected: true },
+        { id: 4, time: "13:30 - 14:30", booked: 0, max: 3, selected: false },
+        { id: 5, time: "14:30 - 15:30", booked: 0, max: 3, selected: false },
+        { id: 6, time: "15:30 - 16:30", booked: 0, max: 3, selected: false }
+    ];
+
+    let appointments = [
+        {
+            id: "LH-001",
+            customer: "Nguyễn Văn A (Mẫu báo cáo)",
+            phone: "0909 123 456",
+            plate: "51K-888.99",
+            model: "Mazda CX-5",
+            date: "2026-11-18",
+            slotId: 3,
+            slotTime: "10:00 - 11:00",
+            services: ["Bảo dưỡng định kỳ mốc 10.000 km"],
+            totalPrice: 1250000,
+            paymentMethod: "COD (Thanh toán tại xưởng)",
+            status: "PENDING"
+        }
+    ];
+
+    let barChartInstance = null;
+
+    function formatVND(num) {
+        return num.toLocaleString('vi-VN') + ' đ';
+    }
+
+    function selectPayment(method) {
+        currentPaymentMethod = method;
+        const codBox = document.getElementById('pay-cod');
+        const preBox = document.getElementById('pay-prepaid');
+        const qrBox = document.getElementById('qr-payment-box');
+
+        if (method === 'COD') {
+            codBox.className = 'cursor-pointer rounded-2xl p-3.5 border-2 border-brand-600 bg-brand-50/60 transition flex items-start space-x-3';
+            preBox.className = 'cursor-pointer rounded-2xl p-3.5 border border-slate-300 bg-white hover:border-brand-400 transition flex items-start space-x-3';
+            qrBox.classList.add('hidden');
+        } else {
+            preBox.className = 'cursor-pointer rounded-2xl p-3.5 border-2 border-accent-500 bg-orange-50/60 transition flex items-start space-x-3';
+            codBox.className = 'cursor-pointer rounded-2xl p-3.5 border border-slate-300 bg-white hover:border-brand-400 transition flex items-start space-x-3';
+            qrBox.classList.remove('hidden');
+        }
+    }
+
+    function renderUnifiedServices() {
+        const listEl = document.getElementById('unified-service-list');
+        const keyword = document.getElementById('search-service-input').value.toLowerCase();
+        const catFilter = document.getElementById('filter-category-select').value;
+
+        const filtered = services.filter(s => {
+            const matchKw = s.name.toLowerCase().includes(keyword) || s.desc.toLowerCase().includes(keyword);
+            const matchCat = (catFilter === 'ALL') || (s.category === catFilter);
+            return matchKw && matchCat;
+        });
+
+        listEl.innerHTML = '';
+        filtered.forEach(s => {
+            const activeCard = s.selected
+                ? 'border-2 border-brand-600 bg-brand-50/50 shadow-md'
+                : 'border border-slate-200 bg-slate-50/60 hover:bg-white hover:border-brand-400';
+
+            const checkIcon = s.selected
+                ? '<span class="w-7 h-7 rounded-xl bg-brand-600 text-white flex items-center justify-center text-sm shadow"><i class="fa-solid fa-check"></i></span>'
+                : '<span class="w-7 h-7 rounded-xl border-2 border-slate-300 bg-white text-transparent flex items-center justify-center text-sm">✓</span>';
+
+            listEl.innerHTML += `
+                <div onclick="toggleService(${s.id})" class="cursor-pointer rounded-2xl p-5 transition-all flex items-start justify-between gap-4 ${activeCard}">
+                    <div class="flex items-start space-x-4">
+                        <div class="w-12 h-12 rounded-2xl ${s.selected ? 'bg-brand-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200'} flex items-center justify-center text-lg shrink-0 transition">
+                            <i class="fa-solid ${s.icon}"></i>
+                        </div>
+                        <div>
+                            <div class="flex flex-wrap items-center gap-2 mb-1">
+                                <span class="text-xs font-bold px-2.5 py-0.5 rounded-lg bg-slate-200/80 text-slate-700">${s.category}</span>
+                                <span class="text-xs font-bold text-brand-600"><i class="fa-regular fa-clock mr-1"></i>${s.duration} phút</span>
+                            </div>
+                            <h3 class="font-extrabold text-slate-900 text-base sm:text-lg">${s.name}</h3>
+                            <p class="text-sm text-slate-600 mt-1 leading-relaxed">${s.desc}</p>
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0 flex flex-col items-end justify-between self-stretch">
+                        ${checkIcon}
+                        <div class="mt-3">
+                            <span class="text-[11px] text-slate-400 font-bold uppercase block">Giá tham khảo</span>
+                            <span class="text-base sm:text-lg font-extrabold text-brand-700">${formatVND(s.price)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        updateLiveSummary();
+    }
+
+    function toggleService(id) {
+        const item = services.find(x => x.id === id);
+        if (item) {
+            item.selected = !item.selected;
+            renderUnifiedServices();
+        }
+    }
+
+    function renderSlots() {
+        const grid = document.getElementById('slot-grid');
+        grid.innerHTML = '';
+        timeSlots.forEach(s => {
+            const isFull = s.booked >= s.max;
+            if (isFull) {
+                grid.innerHTML += `
+                    <div class="p-3 rounded-2xl border border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed text-center">
+                        <div class="text-sm font-bold line-through">${s.time}</div>
+                        <div class="text-xs font-extrabold text-red-500 mt-1"><i class="fa-solid fa-lock mr-1"></i>Đầy (${s.booked}/${s.max})</div>
+                    </div>
+                `;
+            } else {
+                const activeCls = s.selected
+                    ? 'border-2 border-accent-500 bg-orange-50 text-accent-600 shadow-sm'
+                    : 'border border-emerald-300 bg-emerald-50/70 text-emerald-900 hover:border-emerald-500';
+                grid.innerHTML += `
+                    <div onclick="selectSlot(${s.id})" class="p-3 rounded-2xl cursor-pointer transition text-center ${activeCls}">
+                        <div class="text-sm font-extrabold">${s.time}</div>
+                        <div class="text-xs font-bold mt-1">${s.selected ? '★ Đang chọn' : `Trống ${s.max - s.booked}/${s.max} chỗ`}</div>
+                    </div>
+                `;
+            }
+        });
+        updateLiveSummary();
+    }
+
+    function selectSlot(id) {
+        timeSlots.forEach(s => s.selected = (s.id === id));
+        renderSlots();
+    }
+
+    function updateLiveSummary() {
+        const chosenServices = services.filter(s => s.selected);
+        const chipsEl = document.getElementById('selected-services-chips');
+        const countBadge = document.getElementById('selected-count-badge');
+        const durationLabel = document.getElementById('total-duration-label');
+        const priceLabel = document.getElementById('sum-total-price');
+
+        countBadge.innerText = `Đã chọn ${chosenServices.length} dịch vụ`;
+
+        if (chosenServices.length === 0) {
+            chipsEl.innerHTML = `<span class="text-sm text-red-600 font-bold">Vui lòng bấm chọn ít nhất 1 dịch vụ ở cột bên trái!</span>`;
+            durationLabel.innerHTML = `0 phút`;
+            priceLabel.innerText = '0 đ';
+        } else {
+            let totalMin = 0, totalMoney = 0;
+            chipsEl.innerHTML = '';
+            chosenServices.forEach(s => {
+                totalMin += s.duration;
+                totalMoney += s.price;
+                chipsEl.innerHTML += `
+                    <span class="inline-flex items-center bg-white border border-brand-300 text-brand-700 text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm">
+                        ${s.name}
+                        <button onclick="toggleService(${s.id})" class="ml-2 text-slate-400 hover:text-red-500"><i class="fa-solid fa-xmark"></i></button>
+                    </span>
+                `;
+            });
+            durationLabel.innerHTML = `<i class="fa-regular fa-clock mr-1"></i> Tổng: ${totalMin} phút`;
+            priceLabel.innerText = formatVND(totalMoney);
+        }
+
+        const chosenSlot = timeSlots.find(s => s.selected);
+        const dateVal = document.getElementById('inp-date').value;
+        document.getElementById('sum-slot-text').innerText = chosenSlot ? `${chosenSlot.time} (${dateVal})` : 'Chưa chọn giờ';
+    }
+
+    async function handleCreateBooking() {
+        const chosenServices = services.filter(s => s.selected);
+        if (chosenServices.length === 0) {
+            alert('Vui lòng chọn ít nhất 1 dịch vụ bảo dưỡng ở bên trái!');
+            return;
+        }
+
+        const customer = document.getElementById('inp-customer').value.trim();
+        const phone = document.getElementById('inp-phone').value.trim();
+        const plate = document.getElementById('inp-plate').value.trim().toUpperCase();
+        const model = document.getElementById('inp-model').value.trim() || 'Ô tô khách hàng';
+        const dateVal = document.getElementById('inp-date').value;
+
+        if (!customer || !phone || !plate) {
+            alert('Vui lòng nhập đầy đủ Họ tên, Số điện thoại và Biển số xe!');
+            return;
+        }
+
+        const slot = timeSlots.find(s => s.selected);
+        if (!slot || slot.booked >= slot.max) {
+            alert('Khung giờ này đã đầy 3/3 xe! Vui lòng chọn khung giờ khác.');
+            return;
+        }
+
+        const serviceNames = chosenServices.map(s => s.name);
+        const totalMoney = chosenServices.reduce((sum, s) => sum + s.price, 0);
+        const newCode = 'LH-00' + (appointments.length + 1);
+        const payLabel = currentPaymentMethod === 'COD' ? 'COD (Thanh toán tại xưởng)' : 'Trả trước (Chuyển khoản QR)';
+
+        try {
+            await fetch('/api/appointments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    appointmentCode: newCode,
+                    customerName: customer,
+                    phone: phone,
+                    licensePlate: plate,
+                    serviceName: serviceNames.join(' + '),
+                    appointmentDate: dateVal,
+                    slotId: slot.id,
+                    slotTime: slot.time
+                })
+            });
+        } catch (e) {}
+
+        slot.booked += 1;
+        appointments.unshift({
+            id: newCode,
+            customer: customer,
+            phone: phone,
+            plate: plate,
+            model: model,
+            date: dateVal,
+            slotId: slot.id,
+            slotTime: slot.time,
+            services: serviceNames,
+            totalPrice: totalMoney,
+            paymentMethod: payLabel,
+            status: 'PENDING'
+        });
+
+        document.getElementById('inp-customer').value = '';
+        document.getElementById('inp-phone').value = '';
+        document.getElementById('inp-plate').value = '';
+        document.getElementById('inp-model').value = '';
+
+        renderSlots();
+        renderTrackingCards();
+        renderAdminTable();
+        if (barChartInstance) {
+            barChartInstance.data.datasets[0].data = timeSlots.map(s => s.booked);
+            barChartInstance.update();
+        }
+        document.getElementById('nav-badge-count').innerText = appointments.length;
+
+        alert(`🎉 Đặt lịch thành công!\n• Mã phiếu: #${newCode}\n• Hình thức: ${payLabel}`);
+        switchView('tracking');
+    }
+
+    function renderTrackingCards() {
+        const container = document.getElementById('tracking-cards-container');
+        const kw = (document.getElementById('search-tracking-input').value || '').toLowerCase();
+        container.innerHTML = '';
+
+        const list = appointments.filter(a => a.plate.toLowerCase().includes(kw) || a.phone.toLowerCase().includes(kw) || a.customer.toLowerCase().includes(kw));
+
+        list.forEach(a => {
+            let statusBadge = '<span class="bg-amber-100 text-amber-800 text-sm font-extrabold px-3.5 py-1.5 rounded-full">⏳ Chờ xác nhận (PENDING)</span>';
+            if (a.status === 'CONFIRMED') statusBadge = '<span class="bg-blue-100 text-blue-700 text-sm font-extrabold px-3.5 py-1.5 rounded-full">✓ Đã xác nhận (CONFIRMED)</span>';
+            if (a.status === 'IN_PROGRESS') statusBadge = '<span class="bg-purple-100 text-purple-700 text-sm font-extrabold px-3.5 py-1.5 rounded-full">🔧 Đang sửa chữa (IN_PROGRESS)</span>';
+            if (a.status === 'COMPLETED') statusBadge = '<span class="bg-emerald-100 text-emerald-700 text-sm font-extrabold px-3.5 py-1.5 rounded-full">★ Hoàn thành (COMPLETED)</span>';
+            if (a.status === 'CANCELLED') statusBadge = '<span class="bg-red-100 text-red-700 text-sm font-extrabold px-3.5 py-1.5 rounded-full">✕ Đã hủy (CANCELLED)</span>';
+
+            container.innerHTML += `
+                <div class="bg-white rounded-3xl p-6 sm:p-7 shadow-md border border-slate-200">
+                    <div class="flex flex-wrap justify-between items-center gap-4 pb-5 border-b border-slate-200">
+                        <div class="flex items-center space-x-3.5">
+                            <span class="bg-slate-900 text-white text-sm font-extrabold px-3.5 py-2 rounded-xl">#${a.id}</span>
+                            <div>
+                                <h3 class="font-extrabold text-slate-900 text-lg">${a.customer} — <span class="text-brand-600">${a.plate}</span> (${a.model})</h3>
+                                <p class="text-sm text-slate-600 mt-0.5">📅 Ngày hẹn: <strong>${a.date}</strong> • ⏰ Khung giờ: <strong class="text-accent-600">${a.slotTime}</strong></p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2.5">
+                            ${statusBadge}
+                            ${(a.status === 'PENDING' || a.status === 'CONFIRMED') ? `
+                                <button onclick="rescheduleApp('${a.id}')" class="text-sm font-bold px-3.5 py-2 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-800 transition">Đổi giờ (F05)</button>
+                                <button onclick="cancelApp('${a.id}')" class="text-sm font-bold px-3.5 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 transition">Hủy lịch (F05)</button>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap justify-between items-center text-sm bg-slate-50 px-5 py-4 rounded-2xl mt-4 gap-2">
+                        <div><span class="text-slate-500 font-bold">Gói dịch vụ:</span> <strong class="text-slate-900">${a.services.join(' + ')}</strong></div>
+                        <div><span class="text-slate-500 font-bold">Thanh toán:</span> <strong class="text-brand-700">${a.paymentMethod}</strong></div>
+                        <div><span class="text-slate-500 font-bold">Tổng tiền:</span> <strong class="text-lg text-accent-600 font-extrabold">${formatVND(a.totalPrice)}</strong></div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    function rescheduleApp(id) {
+        const newTime = prompt('Nhập khung giờ mới muốn chuyển sang (VD: 13:30 - 14:30):', '13:30 - 14:30');
+        if (!newTime) return;
+        const app = appointments.find(x => x.id === id);
+        if (app) {
+            app.slotTime = newTime;
+            renderTrackingCards();
+            renderAdminTable();
+        }
+    }
+
+    function cancelApp(id) {
+        if (!confirm('Xác nhận hủy lịch hẹn này? Chỗ trống sẽ được trả lại cho khung giờ.')) return;
+        const app = appointments.find(x => x.id === id);
+        if (app && app.status !== 'CANCELLED') {
+            app.status = 'CANCELLED';
+            const slot = timeSlots.find(s => s.id === app.slotId);
+            if (slot && slot.booked > 0) slot.booked -= 1;
+            renderSlots();
+            renderTrackingCards();
+            renderAdminTable();
+        }
+    }
+
+    function renderAdminTable() {
+        const tbody = document.getElementById('admin-tbody');
+        const filterVal = document.getElementById('admin-filter-status').value;
+        tbody.innerHTML = '';
+
+        let pendingCnt = 0, confirmedCnt = 0;
+
+        appointments.forEach(a => {
+            if (a.status === 'PENDING') pendingCnt++;
+            if (a.status === 'CONFIRMED' || a.status === 'IN_PROGRESS') confirmedCnt++;
+
+            if (filterVal !== 'ALL' && a.status !== filterVal) return;
+
+            let badge = '<span class="bg-amber-100 text-amber-800 text-xs font-extrabold px-3 py-1 rounded-full">Chờ duyệt</span>';
+            if (a.status === 'CONFIRMED') badge = '<span class="bg-blue-100 text-blue-700 text-xs font-extrabold px-3 py-1 rounded-full">Đã xác nhận</span>';
+            if (a.status === 'IN_PROGRESS') badge = '<span class="bg-purple-100 text-purple-700 text-xs font-extrabold px-3 py-1 rounded-full">Đang sửa chữa</span>';
+            if (a.status === 'COMPLETED') badge = '<span class="bg-emerald-100 text-emerald-700 text-xs font-extrabold px-3 py-1 rounded-full">Hoàn thành</span>';
+            if (a.status === 'CANCELLED') badge = '<span class="bg-red-100 text-red-700 text-xs font-extrabold px-3 py-1 rounded-full">Đã hủy</span>';
+
+            tbody.innerHTML += `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="py-4 px-5 font-extrabold text-slate-900">#${a.id}</td>
+                    <td class="py-4 px-5">
+                        <div class="font-bold text-slate-900">${a.customer}</div>
+                        <div class="text-xs text-slate-500 font-semibold">${a.phone}</div>
+                    </td>
+                    <td class="py-4 px-5">
+                        <span class="font-extrabold text-brand-700 bg-brand-50 px-2.5 py-1 rounded-lg">${a.plate}</span>
+                        <div class="text-xs text-slate-500 mt-1">${a.model}</div>
+                    </td>
+                    <td class="py-4 px-5">
+                        <div class="font-bold text-slate-900">${a.services.join(' + ')}</div>
+                        <div class="text-xs text-slate-500 mt-0.5">${a.paymentMethod} • <strong class="text-accent-600">${formatVND(a.totalPrice)}</strong></div>
+                    </td>
+                    <td class="py-4 px-5">
+                        <div class="font-extrabold text-slate-900">${a.slotTime}</div>
+                        <div class="text-xs text-slate-500">${a.date}</div>
+                    </td>
+                    <td class="py-4 px-5">${badge}</td>
+                    <td class="py-4 px-5 text-center">
+                        <select onchange="updateAppStatus('${a.id}', this.value)" class="bg-white border-2 border-slate-300 rounded-xl px-3 py-2 text-xs font-extrabold text-slate-800 focus:border-brand-600">
+                            <option value="PENDING" ${a.status === 'PENDING' ? 'selected' : ''}>⏳ Chờ duyệt</option>
+                            <option value="CONFIRMED" ${a.status === 'CONFIRMED' ? 'selected' : ''}>✓ Xác nhận lịch</option>
+                            <option value="IN_PROGRESS" ${a.status === 'IN_PROGRESS' ? 'selected' : ''}>🔧 Đang sửa chữa</option>
+                            <option value="COMPLETED" ${a.status === 'COMPLETED' ? 'selected' : ''}>★ Hoàn thành</option>
+                            <option value="CANCELLED" ${a.status === 'CANCELLED' ? 'selected' : ''}>✕ Từ chối / Hủy</option>
+                        </select>
+                    </td>
+                </tr>
+            `;
+        });
+
+        document.getElementById('kpi-total').innerText = appointments.length;
+        document.getElementById('kpi-pending').innerText = pendingCnt;
+        document.getElementById('kpi-confirmed').innerText = confirmedCnt;
+    }
+
+    function updateAppStatus(id, newStatus) {
+        const app = appointments.find(x => x.id === id);
+        if (app) {
+            app.status = newStatus;
+            renderTrackingCards();
+            renderAdminTable();
+        }
+    }
+
+    function openAuthModal() { document.getElementById('modal-auth').classList.remove('hidden'); document.getElementById('modal-auth').classList.add('flex'); }
+    function closeAuthModal() { document.getElementById('modal-auth').classList.add('hidden'); document.getElementById('modal-auth').classList.remove('flex'); }
+
+    function switchRole(roleLabel, roleCode) {
+        currentRoleCode = roleCode;
+        document.getElementById('header-role-text').innerText = roleLabel;
+        const adminBtn = document.getElementById('btn-admin');
+        const addSvcBtn = document.getElementById('btn-add-service-portal');
+
+        if (roleCode === 'CUSTOMER') {
+            adminBtn.classList.add('hidden');
+            adminBtn.classList.remove('flex');
+            addSvcBtn.classList.add('hidden');
+            addSvcBtn.classList.remove('inline-flex');
+            closeAuthModal();
+            switchView('portal');
+        } else {
+            adminBtn.classList.remove('hidden');
+            adminBtn.classList.add('flex');
+            addSvcBtn.classList.remove('hidden');
+            addSvcBtn.classList.add('inline-flex');
+            closeAuthModal();
+            switchView('admin');
+        }
+    }
+
+    function openNewServiceModal() { document.getElementById('modal-service').classList.remove('hidden'); document.getElementById('modal-service').classList.add('flex'); }
+    function closeNewServiceModal() { document.getElementById('modal-service').classList.add('hidden'); document.getElementById('modal-service').classList.remove('flex'); }
+    function saveNewService() {
+        const name = document.getElementById('new-svc-name').value.trim();
+        const cat = document.getElementById('new-svc-cat').value;
+        const duration = parseInt(document.getElementById('new-svc-duration').value) || 60;
+        const price = parseInt(document.getElementById('new-svc-price').value) || 900000;
+        if (!name) { alert('Vui lòng nhập tên dịch vụ!'); return; }
+
+        services.unshift({
+            id: services.length + 1,
+            name: name,
+            category: cat,
+            duration: duration,
+            price: price,
+            icon: 'fa-screwdriver-wrench',
+            selected: true,
+            desc: 'Dịch vụ mới được bổ sung bởi Quản trị viên.'
+        });
+        document.getElementById('new-svc-name').value = '';
+        closeNewServiceModal();
+        renderUnifiedServices();
+    }
+
+    function switchView(viewName) {
+        if (viewName === 'admin' && currentRoleCode === 'CUSTOMER') {
+            alert('Khu vực này chỉ dành cho Nhân viên tiếp nhận và Quản trị viên!');
+            return;
+        }
+        document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.nav-pill').forEach(btn => {
+            if (!btn.classList.contains('hidden')) {
+                btn.className = 'nav-pill px-5 py-2.5 rounded-xl text-sm font-bold transition flex items-center text-slate-300 hover:text-white';
+            }
+        });
+
+        document.getElementById('view-' + viewName).classList.add('active');
+        const activeBtn = document.getElementById('btn-' + viewName);
+        if (activeBtn && !activeBtn.classList.contains('hidden')) {
+            activeBtn.className = 'nav-pill px-5 py-2.5 rounded-xl text-sm font-bold transition flex items-center bg-brand-600 text-white shadow-md';
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    window.onload = function() {
+        renderUnifiedServices();
+        renderSlots();
+        renderTrackingCards();
+        renderAdminTable();
+
+        barChartInstance = new Chart(document.getElementById('slotBarChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: timeSlots.map(s => s.time),
+                datasets: [{
+                    label: 'Số xe đặt',
+                    data: timeSlots.map(s => s.booked),
+                    backgroundColor: '#2563eb',
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                scales: { y: { beginAtZero: true, max: 3, ticks: { stepSize: 1 } } },
+                plugins: { legend: { display: false } }
+            }
+        });
+
+        new Chart(document.getElementById('serviceDoughnutChart').getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Bảo dưỡng định kỳ', 'Động cơ & Dầu', 'Phanh & An toàn', 'Điện & Điều hòa'],
+                datasets: [{
+                    data: [45, 25, 20, 10],
+                    backgroundColor: ['#2563eb', '#f97316', '#10b981', '#6366f1']
+                }]
+            },
+            options: { plugins: { legend: { position: 'bottom' } } }
+        });
+    };
+</script>
+</body>
+</html>
